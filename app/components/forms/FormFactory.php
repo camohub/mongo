@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Components;
+
+use Nette;
+use Nette\Application\UI\Form;
+
+
+class FormFactory
+{
+	use Nette\SmartObject;
+
+	/**
+	 * @return Form
+	 */
+	public function create()
+	{
+		$form = new Form;
+		return $form;
+	}
+}

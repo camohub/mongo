@@ -1,0 +1,117 @@
+
+{snippet companyUsersForm}
+
+	{form companySelectForm, novalidate => FALSE, class => 'form-inline m-b-lg text-right'}
+		<div n:foreach="$form->errors as $error" class="alert alert-danger alert-dismissible text-danger" role="alert">
+			<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+			{$error}
+		</div>
+		{input company}&nbsp;{input sbmt}
+	{/form}
+
+	{foreach $flashes as $flash}
+		<div class="alert alert-{$flash->type} alert-dismissible text-{$flash->type}">
+			<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+			{$flash->message}
+		</div>
+	{/foreach}
+
+	{form companyUsersForm, novalidate => TRUE}
+		<div n:foreach="$form->errors as $error" class="alert alert-danger alert-dismissible text-danger" role="alert">
+			<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+			{$error}
+		</div>
+
+		<div class="row">
+			<div class="col-xs-12">
+				<table class="table table-responsive table-striped table-bordered table-hover text-center">
+					<tr>
+						<td>{label companyName}{/label}</td>
+						<td colspan="2">{input companyName}</td>
+					</tr>
+					<tr>
+						<td>{label economicalResult}{/label}</td>
+						<td colspan="2">{input economicalResult}</td>
+					</tr>
+					<tr>
+						<td>Meno podielnika</td>
+						<td class="col-xs-6 col-md-3">Podiel v spoločnosti</td>
+						<td>Akcia</td>
+					</tr>
+					{*** USERS ********************************************************}
+					<tr n:foreach="$users as $companyUser">
+						{var $key = $companyUser->key}
+						<td>
+							{input $form['usersContainer']["user_name_$key"]}
+						</td>
+						<td style="white-space: nowrap;">
+							{input $form['usersContainer']["user_share_$key"]}&nbsp;/&nbsp;{input $form['usersContainer']["user_share_base_$key"]}
+						</td>
+						<td class="text-left">
+							{input $form['usersContainer']["user_remove_$key"]}
+							{*<a n:href="removeUser, id => $key" class="ajax btn btn-danger btn-sm">Odstrániť</a>*}
+						</td>
+					</tr>
+					<tr><td colspan="3"></td></tr>
+					{*** NEW USER ******************************************************}
+					<tr id="newUserRow">
+						<td>
+							{input $form['newUserContainer']['newUser']}
+						</td>
+						<td style="white-space: nowrap">
+							{input $form['newUserContainer']['newShare']}&nbsp;/&nbsp;{input $form['newUserContainer']['newShareBase']}
+						</td>
+						<td class="text-left">
+							{input addUserSbmt}
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-12">
+				{input sbmt}
+			</div>
+		</div>
+	{/form}
+{/snippet}
+
+<script>
+	$(function () {
+
+		//var updateShareUrl = {link updateShare!, id => 'idHolder'}
+
+		/*$(document).on('keyup', 'input[name^=usersContainer[user_share]', function( e ) {
+			var input = $(this);
+			var value = $(this).val().replace(',', '.');
+			var url = updateShareUrl.replace('idHolder', input.data('key') );
+
+			if( ! value ) return;
+			if( /^([0-9][.][0-9]+)|([1-9][0-9]*([.][0-9]+)?)$/.test( value ) )
+			{
+				alert( 'Hodnota musí byť číslo');
+			}
+
+			$.nette.ajax({
+				type: 'POST',
+				url: url,
+				data: {
+					inputName: input.attr('name'),
+					value: input.val()
+				},
+				success: function (payload) {
+					console.log('success');
+					console.log('payload');
+				},
+				error: function( jqXHR, status, error )
+				{
+					console.log( 'error' );
+					console.log( jqXHR );
+					console.log( status );
+					console.log( error );
+				}
+			});
+		});*/
+
+	});
+</script>

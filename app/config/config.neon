@@ -1,0 +1,52 @@
+#
+# WARNING: it is CRITICAL that this file & directory are NOT accessible directly via a web browser!
+# https://nette.org/security-warning
+#
+parameters:
+	mongodb:
+		uri: 'mongodb://cluster0-shard-00-00-3m4qk.mongodb.net:27017,cluster0-shard-00-01-3m4qk.mongodb.net:27017,cluster0-shard-00-02-3m4qk.mongodb.net:27017/admin'
+		params:
+			ssl: TRUE
+			username: Camo2
+			password: vladimir81
+			authSource: admin
+			replicaSet: Cluster0-shard-0
+			serverSelectionTryOnce: false
+			serverSelectionTimeoutMS: 15000
+			retryWrites: true
+
+
+
+application:
+	errorPresenter: Error
+	mapping:
+		*: App\*Module\Presenters\*Presenter
+
+
+session:
+	expiration: 14 days
+
+
+database:
+	dsn: 'mysql:host=127.0.0.1;dbname=test'
+	user:
+	password:
+	options:
+		lazy: yes
+
+
+services:
+	router: App\RouterFactory::createRouter
+	- App\Model\UserManager
+	- App\Components\FormFactory
+	- App\Components\SignInFormFactory
+	- App\Components\SignUpFormFactory
+
+	# Services
+	- MongoDB\Client( %mongodb.uri%, %mongodb.params% )
+	- App\Model\Services\BaseService
+	- App\Model\Services\CompanyService
+	- App\Model\Services\UsersService
+
+	# Components
+	- App\Components\ICompanyUsersFormFactory

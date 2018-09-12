@@ -1,0 +1,37 @@
+{**
+ * @param string   $basePath web base path
+ * @param array    $flashes  flash messages
+ *}
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>{ifset title}{include title|stripHtml} | {/ifset}Nette Sandbox</title>
+
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="{$basePath}/node_modules/bootstrap/dist/css/bootstrap.min.css">
+	<link href="{$basePath}/node_modules/select2/dist/css/select2.min.css" rel="stylesheet" />
+	<link rel="stylesheet" href="{$basePath}/css/style.css">
+
+	<script src="{$basePath}/node_modules/jquery/dist/jquery.min.js"></script>
+	{block head}{/block}
+</head>
+
+<body>
+	<div class="container">
+		<div n:foreach="$flashes as $flash" n:class="flash, $flash->type">{$flash->message}</div>
+
+		{include content}
+	</div>
+
+	{block scripts}
+		<script src="{$basePath}/node_modules/nette.ajax.js/nette.ajax.js"></script>
+		<script src="{$basePath}/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+		{*<script src="https://nette.github.io/resources/js/netteForms.min.js"></script>*}
+		<script src="{$basePath}/js/netteForms.min.js"></script>
+		<script src="{$basePath}/node_modules/select2/dist/js/select2.min.js"></script>
+		<script src="{$basePath}/js/main.js"></script>
+	{/block}
+</body>
+</html>
