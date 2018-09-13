@@ -6,7 +6,7 @@ namespace App\Model\Services;
 use Tracy\Debugger;
 
 
-class CompanyPdfService extends BasePdfService
+class CompanyPdfExportService extends BasePdfExportService
 {
 
 	protected $format = 'A4-L';

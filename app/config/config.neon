@@ -3,17 +3,6 @@
 # https://nette.org/security-warning
 #
 parameters:
-	mongodb:
-		uri: 'mongodb://cluster0-shard-00-00-3m4qk.mongodb.net:27017,cluster0-shard-00-01-3m4qk.mongodb.net:27017,cluster0-shard-00-02-3m4qk.mongodb.net:27017/admin'
-		params:
-			ssl: TRUE
-			username: Camo2
-			password: vladimir81
-			authSource: admin
-			replicaSet: Cluster0-shard-0
-			serverSelectionTryOnce: false
-			serverSelectionTimeoutMS: 15000
-			retryWrites: true
 
 
 
@@ -46,7 +35,8 @@ services:
 	- MongoDB\Client( %mongodb.uri%, %mongodb.params% )
 	- App\Model\Services\BaseService
 	- App\Model\Services\CompanyService
-	- App\Model\Services\CompanyPdfService
+	- App\Model\Services\CompanyPdfExportService
+	- App\Model\Services\CompanyExcelExportService
 	- App\Model\Services\UsersService
 
 	# Components

@@ -4,10 +4,12 @@ namespace App\Components;
 
 
 use App;
-use App\Model\Services\BasePdfService;
-use App\Model\Services\CompanyPdfService;
+use App\Model\Services\BasePdfExportService;
+use App\Model\Services\CompanyPdfExportService;
+use App\Model\Services\CompanyExcelExportService;
 use App\Model\Services\CompanyService;
 use MongoDB\BSON\ObjectID;
+use Nette\Application\Responses\FileResponse;
 use Nette\Application\UI\Control;
 use Nette\Application\UI\Form;
 use Nette\Http\Session;
@@ -36,18 +38,22 @@ class CompanyUsersForm extends Control
 	/** @var  CompanyService */
 	protected $companyService;
 
-	/** @var  CompanyPdfService */
-	protected $companyPdfService;
+	/** @var  CompanyPdfExportService */
+	protected $companyPdfExportService;
+
+	/** @var  CompanyExcelExportService */
+	protected $companyExcelExportService;
 
 	/** @var  SessionSection */
 	protected $sessionSection;
 
 
-	public function __construct( CompanyService $cS, CompanyPdfService $cPS, Session $session )
+	public function __construct( CompanyService $cS, CompanyPdfExportService $cPES, CompanyExcelExportService $cEES, Session $session )
 	{
 		parent::__construct();
 		$this->companyService = $cS;
-		$this->companyPdfService = $cPS;
+		$this->companyPdfExportService = $cPES;
+		$this->companyExcelExportService = $cEES;
 		$this->sessionSection = $session->getSection( self::class );
 		$this->sessionSection->users = $this->sessionSection->users ?: [];
 		Debugger::barDump($this->sessionSection);
@@ -65,17 +71,18 @@ class CompanyUsersForm extends Control
 
 	public function handlePdfExport()
 	{
-		$this->companyPdfService->export([
+		$this->companyPdfExportService->export([
 			'companyName' => $this->sessionSection->companyName,
 			'personalProfitsArray' => $this->getPersonalProfitsArray(),
 			'coinsArray' => $this->coins,
-		], BasePdfService::EXPORT_AS_DOWNLOAD);
+		], BasePdfExportService::EXPORT_AS_DOWNLOAD);
 	}
 
 
 	public function handleExcelExport()
 	{
-
+		$fileName = $this->companyExcelExportService->export( $this->sessionSection->companyName, $this->getPersonalProfitsArray(), $this->coins  );
+		$this->getPresenter()->sendResponse( new FileResponse( $fileName, "zhodnotenie-zisku-spolocnosti.xlsx" ) );
 	}
 
 

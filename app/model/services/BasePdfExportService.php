@@ -8,7 +8,7 @@ use Nette\Application\UI\ITemplateFactory;
 use Nette\Bridges\ApplicationLatte\Template;
 
 
-abstract class BasePdfService
+abstract class BasePdfExportService
 {
 
 	const EXPORT_AS_DEFAULT = '';
