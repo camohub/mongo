@@ -5,7 +5,6 @@ namespace App\Components;
 
 use App;
 use App\Model\Services\CompanyService;
-use App\Model\Services\UsersService;
 use MongoDB\BSON\ObjectID;
 use Nette\Application\UI\Control;
 use Nette\Application\UI\Form;
@@ -27,21 +26,22 @@ interface ICompanyUsersFormFactory
 class CompanyUsersForm extends Control
 {
 
+	protected $coins = [
+		'500e' => 500, '200e' => 200, '100e' => 100, '50e' => 50, '20e' => 20, '10e' => 10, '5e' => 5, '2e' => 2, '1e' => 1,
+		'50c' => 0.5, '20c' => 0.2, '10c' => 0.1, '5c' => 0.05, '2c' => 0.02, '1c' => 0.01
+	];
+
 	/** @var  CompanyService */
 	protected $companyService;
-
-	/** @var  UsersService */
-	protected $usersService;
 
 	/** @var  SessionSection */
 	protected $sessionSection;
 
 
-	public function __construct( CompanyService $cS, UsersService $uS, Session $session )
+	public function __construct( CompanyService $cS, Session $session )
 	{
 		parent::__construct();
 		$this->companyService = $cS;
-		$this->usersService = $uS;
 		$this->sessionSection = $session->getSection( self::class );
 		$this->sessionSection->users = $this->sessionSection->users ?: [];
 		//unset($this->sessionSection->companyId);
@@ -132,6 +132,10 @@ class CompanyUsersForm extends Control
 			->setValidationScope( [$newUserContainer] )
 			->setAttribute( 'class', 'btn btn-primary' );
 
+		$form->addSubmit( 'calculateSbtm', 'Prepočítať zisky' )
+			->setValidationScope( [$usersContainer] )
+			->setAttribute( 'class', 'btn btn-primary' );
+
 		$form->addSubmit( 'sbmt', 'Uložiť úpravy' )
 			->setValidationScope( [$usersContainer, $form['companyName'], $form['economicalResult']] )
 			->setAttribute( 'class', 'btn btn-primary' );
@@ -204,6 +208,10 @@ class CompanyUsersForm extends Control
 				Debugger::barDump( 'Saving data to mongo!!!' );
 				$companyId = $this->companyService->saveCompany( $this->sessionSection->companyId, $values->companyName, $values->economicalResult, $this->sessionSection->users );
 				$this->addCompanyToSession( $values->companyName, $values->economicalResult, $companyId );
+			}
+			elseif( $submitName === 'calculateSbmt' )
+			{
+
 			}
 		}
 		catch( \Exception $e )
@@ -286,7 +294,7 @@ class CompanyUsersForm extends Control
 	protected function removeUserFromSession( $id )
 	{
 		unset( $this->sessionSection->users[$id] );
-		$this->flashMessage( 'Pre úplné odstránenie užívateľa z databze kliknite na tlačítko Uložiť úpravy.' );
+		$this->flashMessage( 'Pre úplné odstránenie užívateľa z databazy kliknite na tlačítko Uložiť úpravy.' );
 	}
 
 
@@ -305,6 +313,31 @@ class CompanyUsersForm extends Control
 		}
 
 		return $this->sessionSection;
+	}
+
+
+	/**
+	 * @desc Return an array of coin count for avery coin from $this->coins.
+	 * @param $personalProfit
+	 * @param array $result
+	 * @return array
+	 */
+	protected function getCoinsCount( $personalProfit, array $result = [] )
+	{
+		// Negative numbers rounding solution.
+		$personalProfit = $personalProfit < 0 ? abs( $personalProfit ) : $personalProfit;
+		$coin = current( $this->coins );
+		$coinKey = key( $this->coins );
+
+		$result[$coinKey] = (int)floor( $personalProfit / $coin );
+
+		if( next( $this->coins ) )
+		{
+			$personalProfitRest = round( fmod( $personalProfit, $coin ), 2, PHP_ROUND_HALF_UP );
+			$result = $this->getCoinsCount( $personalProfitRest, $result );
+		}
+
+		return $result;
 	}
 
 }
