@@ -328,7 +328,7 @@ class CompanyUsersForm extends Control
 		{
 			if( $companyId ) $this->sessionSection->companyId = $companyId;
 			$this->sessionSection->companyName = $companyName ?: $this->sessionSection->companyName;
-			$this->sessionSection->economicalResult = $economicalResult ?: $this->sessionSection->economicalResult;
+			$this->sessionSection->economicalResult = round( $economicalResult, 2, PHP_ROUND_HALF_UP ) ?: $this->sessionSection->economicalResult;
 		}
 		catch( \Exception $e )
 		{
@@ -345,7 +345,7 @@ class CompanyUsersForm extends Control
 		$result = [];
 		foreach( $this->sessionSection->users as $user )
 		{
-			$personalProfit = $user->share / $user->shareBase * $this->sessionSection->economicalResult;
+			$personalProfit = round( $user->share / $user->shareBase * $this->sessionSection->economicalResult, 2, PHP_ROUND_HALF_UP );
 			$coinsCountArray = $this->getCoinsCount( $personalProfit );
 			$result[$user->key] = [
 				'user' => $user,
@@ -368,8 +368,6 @@ class CompanyUsersForm extends Control
 	{
 		// Negative numbers rounding solution.
 		$personalProfit = $personalProfit < 0 ? abs( $personalProfit ) : $personalProfit;
-		// Has to be after previous line. Only first iteration.
-		if( ! $result ) $personalProfit = round( $personalProfit, 2, PHP_ROUND_HALF_UP );
 
 		$coin = current( $this->coins );
 		$coinKey = key( $this->coins );
