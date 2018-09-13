@@ -49,18 +49,46 @@
 						</td>
 						<td class="text-left">
 							{input $form['usersContainer']["user_remove_$key"]}
-							{*<a n:href="removeUser, id => $key" class="ajax btn btn-danger btn-sm">Odstrániť</a>*}
 						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+		<div class="row m-b-lg">
+			<div class="col-xs-12">
+				{input sbmt} {input addUserSbmt} {input calculateSbmt}
+			</div>
+		</div>
+	{/form}
+{/snippet}
+
+{snippet personalProfitTable}
+	{ifset $personalProfitsArray}
+		<div class="row">
+			<div class="col-xs-12">
+				<table class="table table-bordered table-striped table-hover table-responsive">
+					<tr>
+						<th class="bg-warning">Meno</th>
+						<th class="bg-warning">Zisk</th>
+						<th n:foreach="$coinsArray as $key => $coin" class="bg-warning">
+							{strtr( $key, ['e' => '&euro;', 'c' => '&#xa2;'])|noescape}
+						</th>
+					</tr>
+					<tr n:foreach="$personalProfitsArray as $personalProfit">
+						<td>{$personalProfit['user']->name}</td>
+						<td n:class="$personalProfit['personalProfit'] < 0 ? text-danger : text-primary">{$personalProfit['personalProfit']}</td>
+						<td n:foreach="$personalProfit['coinsCount'] as $coinCount">{$coinCount}</td>
 					</tr>
 				</table>
 			</div>
 		</div>
 		<div class="row">
 			<div class="col-xs-12">
-				{input sbmt} {input calculateSbmt} {input addUserSbmt}
+				<a n:href="pdfExport!" class="btn btn-warning btn-sm">Expot do PDF</a>
+				<a n:href="excelExport!" class="btn btn-warning btn-sm">Expot do XLS </a>
 			</div>
 		</div>
-	{/form}
+	{/ifset}
 {/snippet}
 
 <script>

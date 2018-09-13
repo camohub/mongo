@@ -46,6 +46,7 @@ services:
 	- MongoDB\Client( %mongodb.uri%, %mongodb.params% )
 	- App\Model\Services\BaseService
 	- App\Model\Services\CompanyService
+	- App\Model\Services\CompanyPdfService
 	- App\Model\Services\UsersService
 
 	# Components

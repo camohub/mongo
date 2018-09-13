@@ -4,6 +4,8 @@ namespace App\Components;
 
 
 use App;
+use App\Model\Services\BasePdfService;
+use App\Model\Services\CompanyPdfService;
 use App\Model\Services\CompanyService;
 use MongoDB\BSON\ObjectID;
 use Nette\Application\UI\Control;
@@ -34,17 +36,20 @@ class CompanyUsersForm extends Control
 	/** @var  CompanyService */
 	protected $companyService;
 
+	/** @var  CompanyPdfService */
+	protected $companyPdfService;
+
 	/** @var  SessionSection */
 	protected $sessionSection;
 
 
-	public function __construct( CompanyService $cS, Session $session )
+	public function __construct( CompanyService $cS, CompanyPdfService $cPS, Session $session )
 	{
 		parent::__construct();
 		$this->companyService = $cS;
+		$this->companyPdfService = $cPS;
 		$this->sessionSection = $session->getSection( self::class );
 		$this->sessionSection->users = $this->sessionSection->users ?: [];
-		//unset($this->sessionSection->companyId);
 		Debugger::barDump($this->sessionSection);
 	}
 
@@ -55,6 +60,22 @@ class CompanyUsersForm extends Control
 		$this->template->users = $this->sessionSection->users;
 
 		$this->template->render();
+	}
+
+
+	public function handlePdfExport()
+	{
+		$this->companyPdfService->export([
+			'companyName' => $this->sessionSection->companyName,
+			'personalProfitsArray' => $this->getPersonalProfitsArray(),
+			'coinsArray' => $this->coins,
+		], BasePdfService::EXPORT_AS_DOWNLOAD);
+	}
+
+
+	public function handleExcelExport()
+	{
+
 	}
 
 
@@ -135,16 +156,16 @@ class CompanyUsersForm extends Control
 		$presenter = $form->getPresenter();
 		$submitName = $form->isSubmitted()->getName();
 
-		Debugger::barDump( $values );
-
-		if( Strings::startsWith( $submitName, 'user_remove' ) ) return;
-		if( Strings::startsWith( $submitName, 'addUserSbmt' ) ) return;
+		if( Strings::startsWith( $submitName, 'user_remove' ) || Strings::startsWith( $submitName, 'addUserSbmt' ) ) return;
 
 		try
 		{
 			$usersContainer = $values->usersContainer;
-			// Next line return ensures continue to native form validation to show error message.
-			if( ! $usersContainer->user_share_base_new || ! $usersContainer->user_share_new || ! $usersContainer->user_name_new ) return;
+			if( isset( $usersContainer->user_share_base_new ) )
+			{
+				// Next line ensures continue to native form validation to show error message if values are empty.
+				if( ! $usersContainer->user_share_base_new || ! $usersContainer->user_share_new || ! $usersContainer->user_name_new ) return;
+			}
 
 			$sum = 0;
 			foreach ( $this->sessionSection->users as $user )
@@ -157,6 +178,7 @@ class CompanyUsersForm extends Control
 		catch ( \Exception $e )
 		{
 			Debugger::log( $e, Debugger::ERROR );
+			throw $e;
 		}
 
 		if( $presenter->isAjax() )
@@ -170,12 +192,13 @@ class CompanyUsersForm extends Control
 	{
 		$presenter = $form->getPresenter();
 		$submitName = $form->isSubmitted()->getName();
+		$session = $this->sessionSection;
 
 		try
 		{
 			if( $submitName === 'addUserSbmt' )
 			{
-				if( isset( $this->sessionSection->users['new'] ) ) return;  // Session already contains new user item.
+				if( isset( $session->users['new'] ) ) return;  // Session already contains new user item.
 				$this->addUserToSession();
 				$this->flashMessage( 'Nový spoluvlastník bol pridaný. Vyplňte údaje prosím.' );
 			}
@@ -184,21 +207,28 @@ class CompanyUsersForm extends Control
 				$explode = explode( '_', $submitName );
 				$this->removeUserFromSession( end($explode) );
 			}
-			elseif( $submitName === 'sbmt' )
+			elseif( $submitName === 'sbmt' || $submitName === 'calculateSbmt' )
 			{
-				Debugger::barDump( 'Saving data to mongo!!!' );
+				// Next condition is mutual for both buttons.
 				if( isset( $values->usersContainer->user_name_new ) )
 				{
 					$usersContainer = $values->usersContainer;
-					unset( $this->sessionSection->users['new'] );
+					unset( $session->users['new'] );
 					$this->addUserToSession( $usersContainer->user_name_new, $usersContainer->user_share_base_new, $usersContainer->user_share_new );
 				}
-				$companyId = $this->companyService->saveCompany( $this->sessionSection->companyId, $values->companyName, $values->economicalResult, $this->sessionSection->users );
-				$this->addCompanyToSession( $values->companyName, $values->economicalResult, $companyId );
-			}
-			elseif( $submitName === 'calculateSbmt' )
-			{
 
+				if( $submitName === 'sbmt' )
+				{
+					$companyId = $this->companyService->saveCompany( $session->companyId, $values->companyName, $values->economicalResult, $session->users );
+					$this->addCompanyToSession( $values->companyName, $values->economicalResult, $companyId );
+				}
+				elseif( $submitName === 'calculateSbmt' )
+				{
+					$this->addCompanyToSession( $values->companyName, $values->economicalResult );
+					$this->template->personalProfitsArray = $this->getPersonalProfitsArray();
+					$this->template->coinsArray = $this->coins;
+					return;  // Return avoids redirect
+				}
 			}
 		}
 		catch( \Exception $e )
@@ -303,6 +333,24 @@ class CompanyUsersForm extends Control
 	}
 
 
+	protected function getPersonalProfitsArray()
+	{
+		$result = [];
+		foreach( $this->sessionSection->users as $user )
+		{
+			$personalProfit = $user->share / $user->shareBase * $this->sessionSection->economicalResult;
+			$coinsCountArray = $this->getCoinsCount( $personalProfit );
+			$result[$user->key] = [
+				'user' => $user,
+				'personalProfit' => $personalProfit,
+				'coinsCount' => $coinsCountArray,
+			];
+		}
+
+		return $result;
+	}
+
+
 	/**
 	 * @desc Return an array of coin count for avery coin from $this->coins.
 	 * @param $personalProfit
@@ -313,15 +361,22 @@ class CompanyUsersForm extends Control
 	{
 		// Negative numbers rounding solution.
 		$personalProfit = $personalProfit < 0 ? abs( $personalProfit ) : $personalProfit;
+		// Has to be after previous line. Only first iteration.
+		if( ! $result ) $personalProfit = round( $personalProfit, 2, PHP_ROUND_HALF_UP );
+
 		$coin = current( $this->coins );
 		$coinKey = key( $this->coins );
 
-		$result[$coinKey] = (int)floor( $personalProfit / $coin );
+		$result[$coinKey] = (int)($personalProfit / $coin);
 
 		if( next( $this->coins ) )
 		{
-			$personalProfitRest = round( fmod( $personalProfit, $coin ), 2, PHP_ROUND_HALF_UP );
+			$personalProfitRest = fmod( $personalProfit, $coin );
 			$result = $this->getCoinsCount( $personalProfitRest, $result );
+		}
+		else
+		{
+			reset( $this->coins );
 		}
 
 		return $result;

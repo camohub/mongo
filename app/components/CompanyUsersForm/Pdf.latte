@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<style>
+		body {
+			color: #2d2d2d;
+		}
+		table {
+			width: 100%;
+		}
+		table, td, th {
+			border-collapse: collapse;
+			border-spacing: 0;
+			border: 1px solid #718297;
+		}
+		th, td {
+			padding: 7px;
+		}
+		th {
+			background-color: rgba(175, 180, 225, 0.48);
+		}
+		.text-danger {
+			color: red;
+		}
+		.text-primary {
+			color: #4579ff;
+		}
+		.text-muted {
+			color: #949091;
+		}
+	</style>
+</head>
+
+<body>
+
+<h1>Zhodnotenie zisku spoločnosti - {$companyName}</h1>
+
+<table>
+	<tr>
+		<th class="bg-warning">Meno</th>
+		<th class="bg-warning">Zisk</th>
+		<th n:foreach="$coinsArray as $key => $coin" class="bg-warning">
+			{strtr( $key, ['e' => '&euro;', 'c' => '&#xa2;'])|noescape}
+		</th>
+	</tr>
+	<tr n:foreach="$personalProfitsArray as $personalProfit">
+		<td>{$personalProfit['user']->name}</td>
+		<td n:class="$personalProfit['personalProfit'] < 0 ? text-danger : text-primary">{$personalProfit['personalProfit']}</td>
+		<td n:foreach="$personalProfit['coinsCount'] as $coinCount" n:class="$coinCount == 0 ? text-muted">{$coinCount}</td>
+	</tr>
+</table>
+
+</body>
+</html>
