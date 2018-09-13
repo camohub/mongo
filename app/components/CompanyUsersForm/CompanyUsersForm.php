@@ -58,13 +58,6 @@ class CompanyUsersForm extends Control
 	}
 
 
-	public function handleUpdateShare( $id )
-	{
-		$post = $this->presenter->getHttpRequest()->getPost();
-		if( ! $post['name'] || ! $post['value'] ) return;
-	}
-
-
 	public function createComponentCompanyUsersForm()
 	{
 		$form = new Form;
@@ -85,54 +78,43 @@ class CompanyUsersForm extends Control
 		foreach ( $this->sessionSection->users as $user )
 		{
 			$usersContainer->addText("user_name_$user->key")
+				->setRequired('Meno spoluvlastníka je povinný údaj.')
 				->setAttribute( 'class', 'form-control' )
-				->setAttribute( 'readonly', TRUE )
 				->setDefaultValue( $user->name );
 
 			$usersContainer->addText( "user_share_$user->key", '' )
+				->setRequired('Čitateľ podielu je povinný údaj.')
+				->addRule( $form::FLOAT, 'Čitateľ podielu musí byť číslo.')
 				->setAttribute( 'data-key', $user->key )
 				->setAttribute( 'class', 'form-control w-45-p' )
 				->setAttribute( 'style', 'display: inline' )
-				->setAttribute( 'readonly', TRUE )
 				->setDefaultValue( $user->share );
 
 			$usersContainer->addText( "user_share_base_$user->key", '' )
+				->setRequired('Menovateľ podielu je povinný údaj.')
+				->addRule( $form::FLOAT, 'Menovateľ podielu musí byť číslo.')
 				->setAttribute( 'data-key', $user->key )
 				->setAttribute( 'class', 'form-control w-45-p' )
 				->setAttribute( 'style', 'display: inline' )
-				->setAttribute( 'readonly', TRUE )
 				->setDefaultValue( $user->shareBase );
 
 			$usersContainer->addSubmit( "user_remove_$user->key", 'Odstrániť' )
 				->setAttribute( 'class', 'btn btn-danger btn-sm' )
 				->setValidationScope( FALSE );
 
+			if( $user->name != 'new' )
+			{
+				$usersContainer["user_name_$user->key"]->setAttribute( 'readonly', TRUE );
+				$usersContainer["user_share_$user->key"]->setAttribute( 'readonly', TRUE );
+				$usersContainer["user_share_base_$user->key"]->setAttribute( 'readonly', TRUE );
+			}
+
 		}
 
-		$newUserContainer = $form->addContainer('newUserContainer');
-
-		$newUserContainer->addText( 'newUser', 'Pridať spoluvlastníka' )
-			->setAttribute( 'class', 'form-control' )
-			->setRequired('Meno spoluvlastníka je povinný údaj.')
-			->addRule( $form::MAX_LENGTH, 'Meno užívateľa nesmie byť dlhšie ako 50 znakov.', 50 );
-
-		$newUserContainer->addText( 'newShareBase', 'Základ podielu' )
-			->setAttribute( 'class', 'form-control w-45-p' )
-			->setAttribute( 'style', 'display: inline' )
-			->setRequired('Základ podielu je povinný údaj.')
-			->addRule( $form::FLOAT, 'Čitateľ podielu musí byť číslo.');
-
-		$newUserContainer->addText( 'newShare', 'Pridať podiel' )
-			->setAttribute( 'class', 'form-control w-45-p' )
-			->setAttribute( 'style', 'display: inline' )
-			->setRequired('Podiel je povinný údaj.')
-			->addRule( $form::FLOAT, 'Menovateľ užívateľa musí byť číslo.');
-
 		$form->addSubmit( 'addUserSbmt', 'Pridať užívateľa' )
-			->setValidationScope( [$newUserContainer] )
 			->setAttribute( 'class', 'btn btn-primary' );
 
-		$form->addSubmit( 'calculateSbtm', 'Prepočítať zisky' )
+		$form->addSubmit( 'calculateSbmt', 'Prepočítať zisky' )
 			->setValidationScope( [$usersContainer] )
 			->setAttribute( 'class', 'btn btn-primary' );
 
@@ -153,23 +135,21 @@ class CompanyUsersForm extends Control
 		$presenter = $form->getPresenter();
 		$submitName = $form->isSubmitted()->getName();
 
+		Debugger::barDump( $values );
+
 		if( Strings::startsWith( $submitName, 'user_remove' ) ) return;
+		if( Strings::startsWith( $submitName, 'addUserSbmt' ) ) return;
 
 		try
 		{
-			if( $submitName === 'addUserSbmt')
-			{
-				// Next line returns because code below requires this values. Native form validation adds error message.
-				if( ! $values->newUserContainer->newShareBase || ! $values->newUserContainer->newShare || ! $values->newUserContainer->newUser ) return;
-				if( $values->newUserContainer->newShareBase < $values->newUserContainer->newShare ) $form->addError( 'Čitateľ podielu musí byť menší ako menovateľ' );
-			}
+			$usersContainer = $values->usersContainer;
+			// Next line return ensures continue to native form validation to show error message.
+			if( ! $usersContainer->user_share_base_new || ! $usersContainer->user_share_new || ! $usersContainer->user_name_new ) return;
 
-			// If inserting new user must include new values to the sum.
-			$sum = $submitName === 'addUserSbmt' ? $values->newUserContainer->newShare / $values->newUserContainer->newShareBase : 0;
+			$sum = 0;
 			foreach ( $this->sessionSection->users as $user )
 			{
-				$sum += $values->usersContainer->{"user_share_$user->key"} / $values->usersContainer{"user_share_base_$user->key"};
-				//Debugger::log("user_share_$user->name"); Debugger::log($sum);
+				$sum += $usersContainer->{"user_share_$user->key"} / $usersContainer{"user_share_base_$user->key"};
 			}
 
 			if( $sum > 1 ) $form->addError( 'Súčet podielov nemôže prekročiť 1 (100%).' );
@@ -195,8 +175,9 @@ class CompanyUsersForm extends Control
 		{
 			if( $submitName === 'addUserSbmt' )
 			{
-				$this->addUserToSession( $values->newUserContainer->newUser, $values->newUserContainer->newShareBase, $values->newUserContainer->newShare );
-				$this->flashMessage( 'Spoluvlastník ' . $values->newUserContainer->newUser . ' bol pridaný.' );
+				if( isset( $this->sessionSection->users['new'] ) ) return;  // Session already contains new user item.
+				$this->addUserToSession();
+				$this->flashMessage( 'Nový spoluvlastník bol pridaný. Vyplňte údaje prosím.' );
 			}
 			elseif( Strings::startsWith( $submitName, 'user_remove' ) )
 			{
@@ -206,6 +187,12 @@ class CompanyUsersForm extends Control
 			elseif( $submitName === 'sbmt' )
 			{
 				Debugger::barDump( 'Saving data to mongo!!!' );
+				if( isset( $values->usersContainer->user_name_new ) )
+				{
+					$usersContainer = $values->usersContainer;
+					unset( $this->sessionSection->users['new'] );
+					$this->addUserToSession( $usersContainer->user_name_new, $usersContainer->user_share_base_new, $usersContainer->user_share_new );
+				}
 				$companyId = $this->companyService->saveCompany( $this->sessionSection->companyId, $values->companyName, $values->economicalResult, $this->sessionSection->users );
 				$this->addCompanyToSession( $values->companyName, $values->economicalResult, $companyId );
 			}
@@ -269,13 +256,13 @@ class CompanyUsersForm extends Control
 
 ///// PROTECTED ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	protected function addUserToSession( $name, $shareBase, $share )
+	protected function addUserToSession( $name = '', $shareBase = '', $share = '' )
 	{
 		try
 		{
 			$user = new \stdClass();
-			$user->name = $name;
-			$user->key = Strings::webalize( $name ) . time();
+			$user->name = $name ?: 'new';
+			$user->key = $user->name == 'new' ? $user->name : Strings::webalize( $name ) . time();  // New user has key new
 			$user->shareBase = $shareBase;
 			$user->share = $share;
 
