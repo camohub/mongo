@@ -137,11 +137,11 @@ class CompanyUsersForm extends Control
 			->setAttribute( 'class', 'btn btn-primary' );
 
 		$form->addSubmit( 'calculateSbmt', 'Prepočítať zisky' )
-			->setValidationScope( [$usersContainer] )
+			->setValidationScope()
 			->setAttribute( 'class', 'btn btn-primary' );
 
 		$form->addSubmit( 'sbmt', 'Uložiť úpravy' )
-			->setValidationScope( [$usersContainer, $form['companyName'], $form['economicalResult']] )
+			->setValidationScope()
 			->setAttribute( 'class', 'btn btn-primary' );
 
 		$form->onValidate[] = [$this, 'usersFormValidate'];
