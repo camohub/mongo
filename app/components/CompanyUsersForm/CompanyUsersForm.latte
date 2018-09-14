@@ -63,18 +63,18 @@
 {/snippet}
 
 {snippet personalProfitTable}
-	{ifset $personalProfitsArray}
+	{ifset $calculation->personalProfitsArray}
 		<div class="row">
 			<div class="col-xs-12">
 				<table class="table table-bordered table-striped table-hover table-responsive">
 					<tr>
 						<th class="bg-warning">Meno</th>
 						<th class="bg-warning">Zisk</th>
-						<th n:foreach="$coinsArray as $key => $coin" class="bg-warning">
+						<th n:foreach="$calculation->coinsArray as $key => $coin" class="bg-warning">
 							{strtr( $key, ['e' => '&euro;', 'c' => '&#xa2;'])|noescape}
 						</th>
 					</tr>
-					<tr n:foreach="$personalProfitsArray as $personalProfit">
+					<tr n:foreach="$calculation->personalProfitsArray as $personalProfit">
 						<td>{$personalProfit['user']->name}</td>
 						<td n:class="$personalProfit['personalProfit'] < 0 ? text-danger : text-primary">{$personalProfit['personalProfit']}</td>
 						<td n:foreach="$personalProfit['coinsCount'] as $coinCount">{$coinCount}</td>

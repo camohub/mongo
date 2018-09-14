@@ -15,6 +15,7 @@ use Nette\Application\UI\Form;
 use Nette\Http\Session;
 use Nette\Http\SessionSection;
 use Nette\Utils\Strings;
+use stdClass;
 use Tracy\Debugger;
 
 
@@ -64,6 +65,7 @@ class CompanyUsersForm extends Control
 	{
 		$this->template->setFile( __DIR__ . '/CompanyUsersForm.latte' );
 		$this->template->users = $this->sessionSection->users;
+		$this->template->calculation = $this->sessionSection->calculation;
 
 		$this->template->render();
 	}
@@ -127,16 +129,8 @@ class CompanyUsersForm extends Control
 				->setDefaultValue( $user->shareBase );
 
 			$usersContainer->addSubmit( "user_remove_$user->key", 'Odstrániť' )
-				->setAttribute( 'class', 'btn btn-danger btn-sm' )
-				->setValidationScope( FALSE );
-
-			if( $user->name != 'new' )
-			{
-				$usersContainer["user_name_$user->key"]->setAttribute( 'readonly', TRUE );
-				$usersContainer["user_share_$user->key"]->setAttribute( 'readonly', TRUE );
-				$usersContainer["user_share_base_$user->key"]->setAttribute( 'readonly', TRUE );
-			}
-
+				->setValidationScope( FALSE )
+				->setAttribute( 'class', 'btn btn-danger btn-sm' );
 		}
 
 		$form->addSubmit( 'addUserSbmt', 'Pridať užívateľa' )
@@ -160,38 +154,7 @@ class CompanyUsersForm extends Control
 
 	public function usersFormValidate( Form $form, $values )
 	{
-		$presenter = $form->getPresenter();
-		$submitName = $form->isSubmitted()->getName();
 
-		if( Strings::startsWith( $submitName, 'user_remove' ) || Strings::startsWith( $submitName, 'addUserSbmt' ) ) return;
-
-		try
-		{
-			$usersContainer = $values->usersContainer;
-			if( isset( $usersContainer->user_share_base_new ) )
-			{
-				// Next line ensures continue to native form validation to show error message if values are empty.
-				if( ! $usersContainer->user_share_base_new || ! $usersContainer->user_share_new || ! $usersContainer->user_name_new ) return;
-			}
-
-			$sum = 0;
-			foreach ( $this->sessionSection->users as $user )
-			{
-				$sum += $usersContainer->{"user_share_$user->key"} / $usersContainer{"user_share_base_$user->key"};
-			}
-
-			if( $sum > 1 ) $form->addError( 'Súčet podielov nemôže prekročiť 1 (100%).' );
-		}
-		catch ( \Exception $e )
-		{
-			Debugger::log( $e, Debugger::ERROR );
-			throw $e;
-		}
-
-		if( $presenter->isAjax() )
-		{
-			$this->redrawControl();
-		}
 	}
 
 
@@ -203,9 +166,30 @@ class CompanyUsersForm extends Control
 
 		try
 		{
+			$usersContainer = $values->usersContainer;
+
+			if( ! Strings::startsWith( $submitName, 'user_remove' ) )
+			{
+				$sum = 0;
+				foreach ( $session->users as $user )
+				{
+					$sum += $usersContainer->{"user_share_$user->key"} / $usersContainer{"user_share_base_$user->key"};
+				}
+
+				if( $sum > 1 )
+				{
+					$form->addError( 'Súčet podielov nemôže prekročiť 1 (100%).' );
+					return;
+				}
+			}
+
 			if( $submitName === 'addUserSbmt' )
 			{
-				if( isset( $session->users['new'] ) ) return;  // Session already contains new user item.
+				if( isset( $session->users['new'] ) )
+				{
+					$this->addUserToSession( $usersContainer->user_name_new, $usersContainer->user_share_base_new, $usersContainer->user_share_new );
+					unset( $session->users['new'] );
+				}
 				$this->addUserToSession();
 				$this->flashMessage( 'Nový spoluvlastník bol pridaný. Vyplňte údaje prosím.' );
 			}
@@ -232,9 +216,7 @@ class CompanyUsersForm extends Control
 				elseif( $submitName === 'calculateSbmt' )
 				{
 					$this->addCompanyToSession( $values->companyName, $values->economicalResult );
-					$this->template->personalProfitsArray = $this->getPersonalProfitsArray();
-					$this->template->coinsArray = $this->coins;
-					return;  // Return avoids redirect
+					$this->addCalculationToSession();
 				}
 			}
 		}
@@ -297,7 +279,7 @@ class CompanyUsersForm extends Control
 	{
 		try
 		{
-			$user = new \stdClass();
+			$user = new stdClass();
 			$user->name = $name ?: 'new';
 			$user->key = $user->name == 'new' ? $user->name : Strings::webalize( $name ) . time();  // New user has key new
 			$user->shareBase = $shareBase;
@@ -337,6 +319,14 @@ class CompanyUsersForm extends Control
 		}
 
 		return $this->sessionSection;
+	}
+
+
+	protected function addCalculationToSession()
+	{
+		$this->sessionSection->calculation = new stdClass();
+		$this->sessionSection->calculation->personalProfitsArray = $this->getPersonalProfitsArray();
+		$this->sessionSection->calculation->coinsArray = $this->coins;
 	}
 
 
