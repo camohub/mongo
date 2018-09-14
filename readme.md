@@ -18,10 +18,11 @@ CSS/JS Installation
 -------------------
 All packages are installed via npm like this
 
-	npm install --prefix ./www jquery
+	cd www
+	npm install jquery
 
 MongoDB Connection
 ------------------
-MongoDB connection has to have rigth params in config.neon. 
+MongoDB connection has to have rigth params in config.local.neon. 
 Use _id params to create relations between json documents stored in database.
 
