@@ -208,6 +208,12 @@ class CompanyUsersForm extends Control
 					$this->addUserToSession( $usersContainer->user_name_new, $usersContainer->user_share_base_new, $usersContainer->user_share_new );
 				}
 
+				// Update users session data including keys.
+				foreach ( $session->users as $user )
+				{
+					$this->updateUserInSession( $user->key, $usersContainer->{"user_name_$user->key"}, $usersContainer->{"user_share_base_$user->key"}, $usersContainer->{"user_share_$user->key"} );
+				}
+
 				if( $submitName === 'sbmt' )
 				{
 					$companyId = $this->companyService->saveCompany( $session->companyId, $values->companyName, $values->economicalResult, $session->users );
@@ -286,6 +292,29 @@ class CompanyUsersForm extends Control
 			$user->share = $share;
 
 			$this->sessionSection->users[$user->key] = $user;
+		}
+		catch( \Exception $e )
+		{
+			Debugger::log( $e, Debugger::ERROR );
+			$this->flashMessage( 'Pri ukladaní údajov došlo k chybe.' );
+		}
+
+		return $user;
+	}
+
+	protected function updateUserInSession( $key, $name, $shareBase, $share )
+	{
+		try
+		{
+			$user = new stdClass();
+			$user->name = $name;
+			// New key according new name!!!
+			$user->key = $user->name == 'new' ? $user->name : Strings::webalize( $name ) . time();  // New user has key new
+			$user->shareBase = $shareBase;
+			$user->share = $share;
+
+			$this->sessionSection->users[$user->key] = $user;
+			unset( $this->sessionSection->users[$key] );
 		}
 		catch( \Exception $e )
 		{
